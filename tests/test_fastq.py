@@ -151,7 +151,7 @@ class FastqReaderTestCase(unittest.TestCase):
 
     def test_invalid_line3_stripped(self):
         i_path = _data_path('fastqreader_min_invalid-line3')
-        # fix_id=True: fix inconsistent identifiers (source: SRA data dumps)k
+        # fix_id=True: fix inconsistent identifiers (source: SRA data dumps)
         reader = fastqReader(path=i_path, fix_id=True)
         rvals = [rval for rval in reader]
 
