@@ -6,8 +6,11 @@ import argparse
 from galaxy_utils.sequence.fastq import (
     fastqAggregator,
     fastqReader,
+    fastqReader2,
     fastqVerboseErrorReader,
+    fastqVerboseErrorReader2,
     fastqWriter,
+    fastqWriter2,
 )
 
 
@@ -29,9 +32,37 @@ class Groomer():
 
     def run(self):
         aggregator = fastqAggregator()
+        reader_class = fastqReader2
+        if self.summarize_input:
+            reader_class = fastqVerboseErrorReader2
+        read_count = None
+
+        with fastqWriter2(
+                path=self.output_filename,
+                format=self.output_type,
+                force_quality_encoding=self.force_quality_encoding) as writer:
+
+            with reader_class(
+                    fh=self.file_handle,
+                    path=self.input_filename,
+                    format=self.input_type,
+                    apply_galaxy_conventions=True,
+                    fix_id=self.fix_id) as reader:
+
+                for read_count, fastq_read in enumerate(reader):
+                    if self.summarize_input:
+                        aggregator.consume_read(fastq_read)
+                    writer.write(fastq_read)
+
+        self._print_output(read_count, aggregator)
+
+    def runold(self):
+        aggregator = fastqAggregator()
+
         out = fastqWriter(
             path=self.output_filename, format=self.output_type,
             force_quality_encoding=self.force_quality_encoding)
+
         if self.summarize_input:
             reader_type = fastqVerboseErrorReader
         else:
