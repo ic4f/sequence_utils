@@ -140,17 +140,17 @@ def main():
         joiner = fq.fastqJoiner(input1_type, paste=paste)
     # --
     input2 = fq.fastqNamedReader(path=input2_filename, format=input2_type)
-    out = fq.fastqWriter(path=output_filename, format=input1_type)
     i = None
     skip_count = 0
-    for i, fastq_read in enumerate(fq.fastqReader(path=input1_filename, format=input1_type)):
-        identifier = joiner.get_paired_identifier(fastq_read)
-        fastq_paired = input2.get(identifier)
-        if fastq_paired is None:
-            skip_count += 1
-        else:
-            out.write(joiner.join(fastq_read, fastq_paired))
-    out.close()
+
+    with fq.fastqWriter(path=output_filename, format=input1_type) as out:
+        for i, fastq_read in enumerate(fq.fastqReader(path=input1_filename, format=input1_type)):
+            identifier = joiner.get_paired_identifier(fastq_read)
+            fastq_paired = input2.get(identifier)
+            if fastq_paired is None:
+                skip_count += 1
+            else:
+                out.write(joiner.join(fastq_read, fastq_paired))
 
     if i is None:
         print("Your file contains no valid FASTQ reads.")

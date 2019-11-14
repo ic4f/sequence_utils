@@ -564,7 +564,7 @@ def _fastq_open_stream(fh=None, format="sanger", path=None):
     return fh
 
 
-class fastqReader2(Iterator):
+class fastqReader(Iterator):
 
     def __init__(
             self, fh=None, format='sanger', apply_galaxy_conventions=False, path=None, fix_id=False):
@@ -668,101 +668,101 @@ class fastqReader2(Iterator):
                 return
 
 
-class fastqReader(Iterator):
-    def __init__(
-            self, fh=None, format='sanger', apply_galaxy_conventions=False, path=None, fix_id=False):
-
-        fh = _fastq_open_stream(fh=fh, format=format, path=path)
-        self._set_file_handle(fh)
-
-        self.format = format
-        self.apply_galaxy_conventions = apply_galaxy_conventions
-        self.fix_id = fix_id  # fix inconsistent identifiers (source: SRA data dumps)
-
-    def _set_file_handle(self, fh):
-        # Extension point for subclasses to wrap file handler
-        self.file = fh
-
-    def close(self):
-        return self.file.close()
-
-    def _close_on_error(self):
-        # Extension point for subclasses (fastqVerboseErrorReader needs file access after error)
-        return self.close()
-
-    def __next__(self):
-        rval = fastqSequencingRead.get_class_by_format(self.format)()
-
-        id_line = self._read_fastq_header()  # We need the raw line1 to compare w/line3
-        rval.identifier = id_line
-
-        self._read_fastq_sequence(rval, id_line)
-        self._read_fastq_qualityscores(rval)
-
-        rval.assert_sequence_quality_lengths()
-        if self.apply_galaxy_conventions:
-            rval.apply_galaxy_conventions()
-
-        return rval
-
-    def _read_fastq_header(self):
-        while True:
-            line = self.file.readline()
-            if not line:
-                raise StopIteration
-            line = line.rstrip('\n\r')
-            if line:
-                break
-
-        if not line.startswith('@'):
-            self.close()
-            raise fastqFormatError('Invalid FASTQ header: %s' % line)
-
-        return line
-
-    def _read_fastq_sequence(self, rval, id_line):
-        while True:
-            line = self.file.readline()
-            if not line:
-                self.close()
-                raise fastqFormatError(
-                    'Invalid FASTQ file: could not find quality score of \
-                    sequence identifier %s.' % rval.identifier)
-            line = line.rstrip('\n\r')
-
-            if not line.startswith('+'):
-                rval.append_sequence(line)
-            else:  # Sequence is over, read the quality score identifier
-                if len(line) == 1 or line[1:] == id_line[1:]:  # Line is valid
-                    rval.description = line
-                    break
-                elif self.fix_id:  # Line is not valid, but we must fix it
-                    rval.description = '+'
-                    break
-                else:  # Line is not valid, sound the alarm!
-                    self._close_on_error()
-                    raise fastqFormatError(
-                        'Invalid FASTQ file: quality score identifier (%s) \
-                        does not match sequence identifier (%s).'
-                        % (line, rval.identifier))
-
-    def _read_fastq_qualityscores(self, rval):
-        while rval.insufficient_quality_length():
-            line = self.file.readline()
-            if not line:
-                break
-
-            line = line.rstrip('\n\r')
-            rval.append_quality(line)
-
-    def __iter__(self):
-        while True:
-            try:
-                yield next(self)
-            except StopIteration:
-                self.close()
-                # Catch exception and return normally
-                return
+#class fastqReader(Iterator):
+#    def __init__(
+#            self, fh=None, format='sanger', apply_galaxy_conventions=False, path=None, fix_id=False):
+#
+#        fh = _fastq_open_stream(fh=fh, format=format, path=path)
+#        self._set_file_handle(fh)
+#
+#        self.format = format
+#        self.apply_galaxy_conventions = apply_galaxy_conventions
+#        self.fix_id = fix_id  # fix inconsistent identifiers (source: SRA data dumps)
+#
+#    def _set_file_handle(self, fh):
+#        # Extension point for subclasses to wrap file handler
+#        self.file = fh
+#
+#    def close(self):
+#        return self.file.close()
+#
+#    def _close_on_error(self):
+#        # Extension point for subclasses (fastqVerboseErrorReader needs file access after error)
+#        return self.close()
+#
+#    def __next__(self):
+#        rval = fastqSequencingRead.get_class_by_format(self.format)()
+#
+#        id_line = self._read_fastq_header()  # We need the raw line1 to compare w/line3
+#        rval.identifier = id_line
+#
+#        self._read_fastq_sequence(rval, id_line)
+#        self._read_fastq_qualityscores(rval)
+#
+#        rval.assert_sequence_quality_lengths()
+#        if self.apply_galaxy_conventions:
+#            rval.apply_galaxy_conventions()
+#
+#        return rval
+#
+#    def _read_fastq_header(self):
+#        while True:
+#            line = self.file.readline()
+#            if not line:
+#                raise StopIteration
+#            line = line.rstrip('\n\r')
+#            if line:
+#                break
+#
+#        if not line.startswith('@'):
+#            self.close()
+#            raise fastqFormatError('Invalid FASTQ header: %s' % line)
+#
+#        return line
+#
+#    def _read_fastq_sequence(self, rval, id_line):
+#        while True:
+#            line = self.file.readline()
+#            if not line:
+#                self.close()
+#                raise fastqFormatError(
+#                    'Invalid FASTQ file: could not find quality score of \
+#                    sequence identifier %s.' % rval.identifier)
+#            line = line.rstrip('\n\r')
+#
+#            if not line.startswith('+'):
+#                rval.append_sequence(line)
+#            else:  # Sequence is over, read the quality score identifier
+#                if len(line) == 1 or line[1:] == id_line[1:]:  # Line is valid
+#                    rval.description = line
+#                    break
+#                elif self.fix_id:  # Line is not valid, but we must fix it
+#                    rval.description = '+'
+#                    break
+#                else:  # Line is not valid, sound the alarm!
+#                    self._close_on_error()
+#                    raise fastqFormatError(
+#                        'Invalid FASTQ file: quality score identifier (%s) \
+#                        does not match sequence identifier (%s).'
+#                        % (line, rval.identifier))
+#
+#    def _read_fastq_qualityscores(self, rval):
+#        while rval.insufficient_quality_length():
+#            line = self.file.readline()
+#            if not line:
+#                break
+#
+#            line = line.rstrip('\n\r')
+#            rval.append_quality(line)
+#
+#    def __iter__(self):
+#        while True:
+#            try:
+#                yield next(self)
+#            except StopIteration:
+#                self.close()
+#                # Catch exception and return normally
+#                return
 
 
 class ReadlineCountFile(object):
@@ -778,46 +778,46 @@ class ReadlineCountFile(object):
         return getattr(self.__file, name)
 
 
-class fastqVerboseErrorReader2(fastqReader2):
-    MAX_PRINT_ERROR_BYTES = 1024
-
-    def __init__(self, fh=None, **kwds):
-        super(fastqVerboseErrorReader2, self).__init__(fh=fh, **kwds)
-        self.last_good_identifier = None
-
-    def _close_on_error(self):
-        pass  # Do not close it yet: need file access to provide error details (see __next__())
-
-    def _set_file_handle(self, fh):
-        # Extension point for subclasses to wrap file handler
-        self.file = ReadlineCountFile(fh)
-
-    def __next__(self):
-        if not hasattr(self.file, "readline_count"):
-            return super(fastqVerboseErrorReader2, self).__next__()
-
-        last_good_end_offset = self.file.tell()
-        last_readline_count = self.file.readline_count
-        try:
-            block = super(fastqVerboseErrorReader2, self).__next__()
-            self.last_good_identifier = block.identifier
-            return block
-        except StopIteration as e:
-            raise e
-        except Exception as e:
-            print("There was an error reading your input file. Your input file is likely malformed.\nIt is suggested that you double-check your original input file for errors -- helpful information for this purpose has been provided below.\nHowever, if you think that you have encountered an actual error with this tool, please do tell us by using the bug reporting mechanism.\n\nThe reported error is: '%s'." % e)
-            if self.last_good_identifier is not None:
-                print("The last valid FASTQ read had an identifier of '%s'." % self.last_good_identifier)
-            else:
-                print("The error occurred at the start of your file and no valid FASTQ reads were found.")
-            error_offset = self.file.tell()
-            error_byte_count = error_offset - last_good_end_offset
-            print_error_bytes = min(self.MAX_PRINT_ERROR_BYTES, error_byte_count)
-            print("The error in your file occurs between lines '%i' and '%i', which corresponds to byte-offsets '%i' and '%i', and contains the text (%i of %i bytes shown):\n" % (last_readline_count + 1, self.file.readline_count, last_good_end_offset, error_offset, print_error_bytes, error_byte_count))
-            self.file.seek(last_good_end_offset)
-            print(self.file.read(print_error_bytes))
-            self.file.close()
-            raise e
+#class fastqVerboseErrorReader2(fastqReader2):
+#    MAX_PRINT_ERROR_BYTES = 1024
+#
+#    def __init__(self, fh=None, **kwds):
+#        super(fastqVerboseErrorReader2, self).__init__(fh=fh, **kwds)
+#        self.last_good_identifier = None
+#
+#    def _close_on_error(self):
+#        pass  # Do not close it yet: need file access to provide error details (see __next__())
+#
+#    def _set_file_handle(self, fh):
+#        # Extension point for subclasses to wrap file handler
+#        self.file = ReadlineCountFile(fh)
+#
+#    def __next__(self):
+#        if not hasattr(self.file, "readline_count"):
+#            return super(fastqVerboseErrorReader2, self).__next__()
+#
+#        last_good_end_offset = self.file.tell()
+#        last_readline_count = self.file.readline_count
+#        try:
+#            block = super(fastqVerboseErrorReader2, self).__next__()
+#            self.last_good_identifier = block.identifier
+#            return block
+#        except StopIteration as e:
+#            raise e
+#        except Exception as e:
+#            print("There was an error reading your input file. Your input file is likely malformed.\nIt is suggested that you double-check your original input file for errors -- helpful information for this purpose has been provided below.\nHowever, if you think that you have encountered an actual error with this tool, please do tell us by using the bug reporting mechanism.\n\nThe reported error is: '%s'." % e)
+#            if self.last_good_identifier is not None:
+#                print("The last valid FASTQ read had an identifier of '%s'." % self.last_good_identifier)
+#            else:
+#                print("The error occurred at the start of your file and no valid FASTQ reads were found.")
+#            error_offset = self.file.tell()
+#            error_byte_count = error_offset - last_good_end_offset
+#            print_error_bytes = min(self.MAX_PRINT_ERROR_BYTES, error_byte_count)
+#            print("The error in your file occurs between lines '%i' and '%i', which corresponds to byte-offsets '%i' and '%i', and contains the text (%i of %i bytes shown):\n" % (last_readline_count + 1, self.file.readline_count, last_good_end_offset, error_offset, print_error_bytes, error_byte_count))
+#            self.file.seek(last_good_end_offset)
+#            print(self.file.read(print_error_bytes))
+#            self.file.close()
+#            raise e
 
 
 class fastqVerboseErrorReader(fastqReader):
@@ -862,68 +862,68 @@ class fastqVerboseErrorReader(fastqReader):
             raise e
 
 
-class fastqNamedReader2(fastqReader2):
-    def __init__(self, fh=None, format='sanger', apply_galaxy_conventions=False, path=None):
-        super(fastqNamedReader2, self).__init__(fh=fh, format=format, apply_galaxy_conventions=apply_galaxy_conventions, path=path)
-        self.offset_dict = {}
-        self.eof = False
-
-    def get(self, sequence_identifier):
-        # Input is either a sequence ID or a sequence object
-        if not isinstance(sequence_identifier, string_types):
-            # Input was a sequence object (not a sequence ID). Get the sequence ID
-            sequence_identifier = sequence_identifier.identifier
-        # Get only the ID part of the sequence header
-        sequence_id, sequence_sep, sequence_desc = sequence_identifier.partition(' ')
-        rval = None
-        if sequence_id in self.offset_dict:
-            initial_offset = self.file.tell()
-            seq_offset = self.offset_dict[sequence_id].pop(0)
-            if not self.offset_dict[sequence_id]:
-                del self.offset_dict[sequence_id]
-            self.file.seek(seq_offset)
-            rval = next(self)
-            # assert rval.id == sequence_id, 'seq id mismatch' #should be able to remove this
-            self.file.seek(initial_offset)
-        else:
-            while True:
-                offset = self.file.tell()
-                try:
-                    fastq_read = next(self)
-                except StopIteration:
-                    self.eof = True
-                    break  # eof, id not found, will return None
-                fastq_read_id, fastq_read_sep, fastq_read_desc = fastq_read.identifier.partition(' ')
-                if fastq_read_id == sequence_id:
-                    rval = fastq_read
-                    break
-                else:
-                    if fastq_read_id not in self.offset_dict:
-                        self.offset_dict[fastq_read_id] = []
-                    self.offset_dict[fastq_read_id].append(offset)
-        if rval is not None and self.apply_galaxy_conventions:
-            rval.apply_galaxy_conventions()
-        return rval
-
-    def has_data(self):
-        # returns a string representation of remaining data, or empty string (False) if no data remaining
-        eof = self.eof
-        count = 0
-        rval = ''
-        if self.offset_dict:
-            count = sum(map(len, self.offset_dict.values()))
-        if not eof:
-            offset = self.file.tell()
-            try:
-                next(self)
-            except StopIteration:
-                eof = True
-            self.file.seek(offset)
-        if count:
-            rval = "There were %i known sequence reads not utilized. " % count
-        if not eof:
-            rval = "%s%s" % (rval, "An additional unknown number of reads exist in the input that were not utilized.")
-        return rval
+#class fastqNamedReader2(fastqReader2):
+#    def __init__(self, fh=None, format='sanger', apply_galaxy_conventions=False, path=None):
+#        super(fastqNamedReader2, self).__init__(fh=fh, format=format, apply_galaxy_conventions=apply_galaxy_conventions, path=path)
+#        self.offset_dict = {}
+#        self.eof = False
+#
+#    def get(self, sequence_identifier):
+#        # Input is either a sequence ID or a sequence object
+#        if not isinstance(sequence_identifier, string_types):
+#            # Input was a sequence object (not a sequence ID). Get the sequence ID
+#            sequence_identifier = sequence_identifier.identifier
+#        # Get only the ID part of the sequence header
+#        sequence_id, sequence_sep, sequence_desc = sequence_identifier.partition(' ')
+#        rval = None
+#        if sequence_id in self.offset_dict:
+#            initial_offset = self.file.tell()
+#            seq_offset = self.offset_dict[sequence_id].pop(0)
+#            if not self.offset_dict[sequence_id]:
+#                del self.offset_dict[sequence_id]
+#            self.file.seek(seq_offset)
+#            rval = next(self)
+#            # assert rval.id == sequence_id, 'seq id mismatch' #should be able to remove this
+#            self.file.seek(initial_offset)
+#        else:
+#            while True:
+#                offset = self.file.tell()
+#                try:
+#                    fastq_read = next(self)
+#                except StopIteration:
+#                    self.eof = True
+#                    break  # eof, id not found, will return None
+#                fastq_read_id, fastq_read_sep, fastq_read_desc = fastq_read.identifier.partition(' ')
+#                if fastq_read_id == sequence_id:
+#                    rval = fastq_read
+#                    break
+#                else:
+#                    if fastq_read_id not in self.offset_dict:
+#                        self.offset_dict[fastq_read_id] = []
+#                    self.offset_dict[fastq_read_id].append(offset)
+#        if rval is not None and self.apply_galaxy_conventions:
+#            rval.apply_galaxy_conventions()
+#        return rval
+#
+#    def has_data(self):
+#        # returns a string representation of remaining data, or empty string (False) if no data remaining
+#        eof = self.eof
+#        count = 0
+#        rval = ''
+#        if self.offset_dict:
+#            count = sum(map(len, self.offset_dict.values()))
+#        if not eof:
+#            offset = self.file.tell()
+#            try:
+#                next(self)
+#            except StopIteration:
+#                eof = True
+#            self.file.seek(offset)
+#        if count:
+#            rval = "There were %i known sequence reads not utilized. " % count
+#        if not eof:
+#            rval = "%s%s" % (rval, "An additional unknown number of reads exist in the input that were not utilized.")
+#        return rval
 
 
 class fastqNamedReader(fastqReader):
@@ -991,38 +991,6 @@ class fastqNamedReader(fastqReader):
 
 
 class fastqWriter(object):
-
-    def __init__(self, fh=None, format=None, force_quality_encoding=None, path=None):
-        if fh is None:
-            assert path is not None
-            if format and format.endswith(".gz"):
-                fh = gzip.open(path, "wt")
-            elif format and format.endswith(".bz2"):
-                if six.PY2:
-                    fh = bz2.BZ2File(path, mode="w")
-                else:
-                    fh = bz2.open(path, mode="wt")
-            else:
-                fh = open(path, "wt")
-        else:
-            if format and format.endswith(".gz"):
-                fh = gzip.GzipFile(fileobj=fh)
-            elif format and format.endswith(".bz2"):
-                raise Exception("bz2 formats do not support file handle inputs")
-        self.file = fh
-        self.format = format
-        self.force_quality_encoding = force_quality_encoding
-
-    def write(self, fastq_read):
-        if self.format:
-            fastq_read = fastq_read.convert_read_to_format(self.format, force_quality_encoding=self.force_quality_encoding)
-        self.file.write(str(fastq_read))
-
-    def close(self):
-        return self.file.close()
-
-
-class fastqWriter2(object):
 
     def __init__(self, fh=None, format=None, force_quality_encoding=None, path=None):
         self.fh = fh

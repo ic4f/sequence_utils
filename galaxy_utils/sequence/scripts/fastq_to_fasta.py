@@ -15,10 +15,11 @@ def main():
 
     num_reads = None
     fastq_read = None
-    out = fastaWriter(path=output_filename, format="fasta")
-    for num_reads, fastq_read in enumerate(fastqReader(path=input_filename, format=input_type)):
-        out.write(fastq_read)
-    out.close()
+
+    with fastaWriter(path=output_filename, format="fasta") as out:
+        for num_reads, fastq_read in enumerate(fastqReader(path=input_filename, format=input_type)):
+            out.write(fastq_read)
+
     if num_reads is None:
         print("No valid FASTQ reads could be processed.")
     else:

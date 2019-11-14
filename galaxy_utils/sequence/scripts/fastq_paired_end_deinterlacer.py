@@ -21,41 +21,44 @@ def main():
 
     type = input_type
     input = fastqNamedReader(path=input_filename, format=type)
-    mate1_out = fastqWriter(path=mate1_filename, format=type)
-    mate2_out = fastqWriter(path=mate2_filename, format=type)
-    single1_out = fastqWriter(path=single1_filename, format=type)
-    single2_out = fastqWriter(path=single2_filename, format=type)
-    joiner = fastqJoiner(type)
 
-    i = None
-    skip_count = 0
-    found = {}
-    for i, read in enumerate(fastqReader(path=input_filename, format=type)):
+    with fastqWriter(path=mate1_filename, format=type) as mate1_out, \
+            fastqWriter(path=mate2_filename, format=type) as mate2_out, \
+            fastqWriter(path=single1_filename, format=type) as single1_out, \
+            fastqWriter(path=single2_filename, format=type) as single2_out:
 
-        if read.identifier in found:
-            del found[read.identifier]
-            continue
+        joiner = fastqJoiner(type)
 
-        mate1 = input.get(read.identifier)
+        i = None
+        skip_count = 0
+        found = {}
 
-        mate2 = input.get(joiner.get_paired_identifier(mate1))
+        for i, read in enumerate(fastqReader(path=input_filename, format=type)):
 
-        if mate2:
-            # This is a mate pair
-            found[mate2.identifier] = None
-            if joiner.is_first_mate(mate1):
-                mate1_out.write(mate1)
-                mate2_out.write(mate2)
+            if read.identifier in found:
+                del found[read.identifier]
+                continue
+
+            mate1 = input.get(read.identifier)
+
+            mate2 = input.get(joiner.get_paired_identifier(mate1))
+
+            if mate2:
+                # This is a mate pair
+                found[mate2.identifier] = None
+                if joiner.is_first_mate(mate1):
+                    mate1_out.write(mate1)
+                    mate2_out.write(mate2)
+                else:
+                    mate1_out.write(mate2)
+                    mate2_out.write(mate1)
             else:
-                mate1_out.write(mate2)
-                mate2_out.write(mate1)
-        else:
-            # This is a single
-            skip_count += 1
-            if joiner.is_first_mate(mate1):
-                single1_out.write(mate1)
-            else:
-                single2_out.write(mate1)
+                # This is a single
+                skip_count += 1
+                if joiner.is_first_mate(mate1):
+                    single1_out.write(mate1)
+                else:
+                    single2_out.write(mate1)
 
     if i is None:
         print("Your input file contained no valid FASTQ sequences.")
@@ -65,10 +68,6 @@ def main():
         print('De-interlaced %s pairs of sequences.' % ((i - skip_count + 1) / 2))
 
     input.close()
-    mate1_out.close()
-    mate2_out.close()
-    single1_out.close()
-    single2_out.close()
 
 
 if __name__ == "__main__":
