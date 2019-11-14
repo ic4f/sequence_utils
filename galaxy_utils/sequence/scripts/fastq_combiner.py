@@ -44,12 +44,12 @@ def main():
     skip_count = 0
 
     writer = fastqWriter(path=output_filename, format=format, force_quality_encoding=force_quality_encoding)
-    with writer as out:
+    with writer:
         for i, sequence in enumerate(fastaReader(open(fasta_filename, 'rt'))):
             quality = qual_input.get(sequence)
             if quality:
                 fastq_read = fastq_combiner.combine(sequence, quality)
-                out.write(fastq_read)
+                writer.write(fastq_read)
             else:
                 skip_count += 1
 

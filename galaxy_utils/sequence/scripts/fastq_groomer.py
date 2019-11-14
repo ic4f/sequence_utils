@@ -45,11 +45,11 @@ class Groomer():
             apply_galaxy_conventions=True, 
             fix_id=self.fix_id)
 
-        with writer as out, reader as reader:
+        with writer, reader:
             for read_count, fastq_read in enumerate(reader):
                 if self.summarize_input:
                     aggregator.consume_read(fastq_read)
-                out.write(fastq_read)
+                writer.write(fastq_read)
 
         self._print_output(read_count, aggregator)
 

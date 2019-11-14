@@ -38,11 +38,11 @@ def main():
     # This optimization would cut runtime roughly in half (for my test case anyway). -John
     writer = fastqWriter(path=output_filename, format=input_type)
     reader = fastqReader(path=input_filename, format=input_type)
-    with writer as out, reader as reader:
+    with writer, reader:
         for i, fastq_read in enumerate(reader):
             ret_val = fastq_read_pass_filter(fastq_read)  # fastq_read_pass_filter defined in script_filename  # NOQA
             if ret_val:
-                out.write(fastq_read)
+                writer.write(fastq_read)
                 reads_kept += 1
 
     if i is None:
